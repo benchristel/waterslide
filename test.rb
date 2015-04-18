@@ -1,10 +1,8 @@
 gem 'minitest'
 require 'minitest/autorun'
-require_relative '../waterslide'
+require_relative 'lib/waterslide'
 
-class NoOp
-  include Pipe
-end
+include Waterslide
 
 class AddOne
   include Pipe
@@ -43,7 +41,7 @@ class OnlyEvens
   end
 end
 
-class TestWaterslide < MiniTest::Unit::TestCase
+class TestWaterslide < MiniTest::Test
   def test_piping_a_scalar_through_no_op
     assert_equal 1, (Pipe[1] >> NoOp).first
   end
@@ -87,5 +85,33 @@ class TestWaterslide < MiniTest::Unit::TestCase
   def test_that_pipes_are_enumerables
     assert (Pipe[[1,2,3]] >> Add.new(3)).include? 4
     assert_equal 3, (Pipe[[1,2,3]] >> Add.new(3)).count
+  end
+
+  class InfiniteJest
+    include Pipe
+
+    def each
+      n = 0
+      while(n < 6)
+        yield 'ha'
+        n += 1
+      end
+      raise 'oh no you are dead'
+    end
+  end
+
+  def test_that_enumeration_is_lazy
+    haha = (InfiniteJest.new >> NoOp).first(5)
+    assert_equal ["ha"]*5, haha
+  end
+
+  class MagicArray < Array
+    include Waterslide::RightShiftOverride
+  end
+
+  def test_right_shift_operator_override
+    array = MagicArray.new
+    array << 1 << 2 << 3
+    assert (array >> Add.new(2)).map(&:to_i) == [3, 4, 5]
   end
 end
