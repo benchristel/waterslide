@@ -44,18 +44,6 @@ end
 
 class Chute
   include Pipe
-
-  def >> (pipe)
-    open(pipe).receive_from(self)
-  end
-
-  def open(pipe)
-    pipe.is_a?(Class) ? pipe.new : pipe
-  end
-
-  def each(&block)
-    @incoming.each(&block)
-  end
 end
 
 
