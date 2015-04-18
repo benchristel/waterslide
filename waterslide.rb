@@ -24,6 +24,12 @@ module Pipe
     return nil # if nothing was yielded
   end
 
+  def all
+    all = []
+    each { |one| all << one }
+    all
+  end
+
   private
 
   def pipe_one(thing)
