@@ -1,4 +1,8 @@
 module Pipe
+  def self.included(base)
+    base.class_eval { include Enumerable }
+  end
+
   def self.[] (things)
     things = [things] unless things.respond_to? :each
     Chute.new.receive_from(things)

@@ -45,19 +45,19 @@ end
 
 class TestWaterslide < MiniTest::Unit::TestCase
   def test_piping_a_scalar_through_no_op
-    assert_equal 1, (Pipe[1] >> NoOp).take
+    assert_equal 1, (Pipe[1] >> NoOp).first
   end
 
   def test_piping_a_scalar_through_multiple_no_ops
-    assert_equal 1, (Pipe[1] >> NoOp >> NoOp).take
+    assert_equal 1, (Pipe[1] >> NoOp >> NoOp).first
   end
 
   def test_piping_a_scalar_through_add_one
-    assert_equal 2, (Pipe[1] >> AddOne).take
+    assert_equal 2, (Pipe[1] >> AddOne).first
   end
 
   def test_piping_a_scalar_through_multiple_add_ones
-    assert_equal 3, (Pipe[1] >> AddOne >> AddOne).take
+    assert_equal 3, (Pipe[1] >> AddOne >> AddOne).first
   end
 
   def test_piping_an_array_through_no_op
@@ -82,5 +82,10 @@ class TestWaterslide < MiniTest::Unit::TestCase
 
   def test_piping_an_array_through_add
     assert_equal [4,5,6], (Pipe[[1,2,3]] >> Add.new(3)).all
+  end
+
+  def test_that_pipes_are_enumerables
+    assert (Pipe[[1,2,3]] >> Add.new(3)).include? 4
+    assert_equal 3, (Pipe[[1,2,3]] >> Add.new(3)).count
   end
 end
