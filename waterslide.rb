@@ -5,11 +5,11 @@ module Pipe
   end
 
   def >> (pipe)
-    open(pipe).receive_from(self)
+    instantiated(pipe).receive_from(self)
   end
 
-  def receive_from(incoming)
-    @incoming = incoming
+  def receive_from(enumerable)
+    @incoming = enumerable
     self
   end
 
@@ -37,7 +37,7 @@ module Pipe
     yield thing
   end
 
-  def open(pipe)
+  def instantiated(pipe)
     pipe.is_a?(Class) ? pipe.new : pipe
   end
 end
