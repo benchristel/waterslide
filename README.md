@@ -83,16 +83,16 @@ end
 class MergeWithAttributesFromDatabase
   include Waterslide::Pipe
 
-  def receive_enumerable(users)
-    @database_records = User.where(facebook_id: users.map(&:facebook_id)).to_a
-  end
-
   def pipe_one(user)
-    record = @database_records.find do |record|
+    record = database_records.find do |record|
       record.facebook_id == user.facebook_id
     end
 
     yield user.merge_attributes record
+  end
+
+  def database_records
+    @records ||= User.where(facebook_id: incoming.map(&:facebook_id)).to_a
   end
 end
 

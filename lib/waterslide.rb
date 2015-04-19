@@ -29,7 +29,7 @@ module Waterslide
     end
 
     def each
-      @incoming.each do |one|
+      incoming.each do |one|
         pipe_one(one) { |out| yield out }
       end
     end
@@ -46,6 +46,12 @@ module Waterslide
     end
 
     private
+
+    def incoming
+      # including classes may override this to do processing on the incoming
+      # enumerable as as whole - for instance, to sort it.
+      @incoming
+    end
 
     def pipe_one(thing)
       # identity function by default; including classes should override this
