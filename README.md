@@ -121,7 +121,7 @@ FacebookFriends.new(current_user) >>
   SerializeUsers
 ```
 
-There's obviously a lot more lines of code in the new version, but the sequence of transformations reads naturally, and, perhaps more importantly, every step can now be unit-tested individually.
+There's obviously a lot more lines of code in the new version, but the sequence of transformations reads naturally, it's easy to insert a new transformation without fear of breaking something, and every step can now be unit-tested individually.
 
 ## Installation
 
@@ -140,6 +140,8 @@ Or install it yourself as:
     $ gem install waterslide
 
 ## Usage
+
+### Defining Pipe Classes
 
 Classes that include `Waterslide::Pipe` can take advantage of Waterslide's functionality by overriding the `pipe_one` or `incoming` methods.
 
@@ -208,6 +210,34 @@ end
 ```
 
 It's not recommended to override both `incoming` and `pipe_one`, as the interaction between these is subject to change in future versions of Waterslide. You probably shouldn't be both mapping and reducing in the same pipe anyway.
+
+### Using Pipe Classes
+
+As you may have gathered from the examples, you can link pipes together into a pipeline using the `>>` operator.
+
+> ***Ruby has a `>>` operator? What the hell is that?***
+>
+> It's a clone of C's operator that shifts integers some number of bits to the right. Not many people use Ruby for systems programming or cryptography, so bitshifts aren't very common in Ruby code, although the `<<` operator has a cameo in Array as a near-synonym for `push`.
+
+The value of an expression like `Pipe1 >> Pipe2 >> Pipe3` is an instance of the last class in the pipeline - in this example, `Pipe3`.Pipes include `Enumerable`, so they have the nondestructive methods of other Enumerables like `Array`: `each`, `count`, `include?` and so on. You can get at the whole array with the `all` method.
+
+That leaves one remaining question: how do we get enumerables *into* the pipeline? The most straightforward way is:
+
+```ruby
+Waterslide::Pipe[your_data] >> Pipe2 >> # ...
+```
+
+This creates a no-op pipe which simply hands off your data to `Pipe2`. However, the first object in the pipeline can be anything that implements the `each` method and Waterslide's `>>` operator. The `each` you'll have to do yourself, but you can get `>>` with a simple `include`:
+
+```ruby
+class MyPipe
+  include Waterslide::RightShiftOverride
+
+  def each(&block)
+    @data.each(&block)
+  end
+end
+```
 
 ## Serving Suggestions
 
