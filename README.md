@@ -29,10 +29,10 @@ The usual solution might look something like this:
 
 ```ruby
 Facebook.friends_of(current_user)
-  .map { |friend_datum| FacebookUserDeserializer.deserialize(friend_datum) }
-  .map { |user| user.merge_attributes User.find_by_facebook_id(user.facebook_id) }
+  .map    { |json| FacebookUserDeserializer.deserialize(json) }
+  .map    { |user| user.merge_attributes User.find_by_facebook_id(user.facebook_id) }
   .reject { |user| user.id.nil? }
-  .map { |user| UserSerializer.serialize(user) }
+  .map    { |user| UserSerializer.serialize(user) }
 ```
 
 Later, you find that the page takes a long time to load for users with many facebook friends, and you isolate the problem to the O(n) `User.find_by_facebook_id` calls, most of which don't actually find a user. Fortunately, that's not hard to fix.
@@ -42,16 +42,16 @@ facebook_friends = Facebook.friends_of(current_user).map do |friend_datum|
   FacebookUserDeserializer.deserialize(friend_datum)
 end
 facebook_ids = facebook_friends.map(&:facebook_id)
-facebook_friends_from_database = User.where(facebook_id: facebook_ids)
+facebook_friends_from_database = User.where(facebook_id: facebook_ids).to_a
 facebook_friends.map! do |friend|
   db_record = facebook_friends_from_database.find do |db_record|
     db_record.facebook_id == friend.facebook_id
   end
   friend.merge_attributes db_record
 end
-facebook_friends.map do |user|
-  UserSerializer.serialize(user)
-end
+facebook_friends
+  .reject { |user| user.id.nil? }
+  .map { |user| UserSerializer.serialize(user) }
 ```
 
 In making the code more efficient, its elegance has been destroyed. Now one of the `map` blocks is dependent on an invariant - the users pulled from the database - and that dependency makes the code harder to read and harder to refactor.
@@ -141,7 +141,73 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+Classes that include `Waterslide::Pipe` can take advantage of Waterslide's functionality by overriding the `pipe_one` or `incoming` methods.
+
+The `pipe_one` method processes a single item from the collection fed into the pipe via the `>>` operator. To pass a value to the next pipe in the pipeline, `yield` it from `pipe_one`
+
+```ruby
+class AddOne
+  include Waterslide::Pipe
+
+  def pipe_one(n)
+    yield n + 1
+  end
+end
+```
+
+Note that you can yield any number of times. You can create a filter by yielding an item only if some criterion is met.
+
+```ruby
+class OnlyEvens
+  include Waterslide::Pipe
+
+  def pipe_one(n)
+    yield n if n % 2 == 0
+  end
+end
+
+class Unique
+  include Waterslide::Pipe
+
+  def pipe_one(item)
+    yield item unless seen.include? item
+    seen.add item
+  end
+
+  def seen
+    @seen ||= Set.new
+  end
+end
+```
+
+By yielding more than once, you can expand a list. The following pipe takes a list of classes and outputs the classes and all their ancestors:
+
+```ruby
+class AndAncestorClasses
+  include Waterslide::Pipe
+
+  def pipe_one(klass)
+    yield klass
+    while klass = klass.superclass
+      yield klass
+    end
+  end
+end
+```
+
+If you need to reduce the incoming list, override the `incoming` method. Calling `super` in this method will return the list being piped in. Whatever is returned from `incoming` will be iterated over when calling `each` or another Enumerable method on the pipe.
+
+```ruby
+class Sort
+  include Waterslide::Pipe
+
+  def incoming
+    super.sort
+  end
+end
+```
+
+It's not recommended to override both `incoming` and `pipe_one`, as the interaction between these is subject to change in future versions of Waterslide. You probably shouldn't be both mapping and reducing in the same pipe anyway.
 
 ## Serving Suggestions
 
