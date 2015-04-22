@@ -231,7 +231,7 @@ That leaves one remaining question: how do we get enumerables *into* the pipelin
 Waterslide::Filter[your_data] >> Filter2 >> # ...
 ```
 
-This creates a no-op pipe which simply hands off your data to `Filter2`. However, the first object in the pipeline can be anything that implements the `each` method and Waterslide's `>>` operator. The `each` you'll have to do yourself, but you can get `>>` with a simple `include`:
+This creates a no-op filter which simply hands off your data to `Filter2`. However, the first object in the pipeline can be anything that implements the `each` method and Waterslide's `>>` operator. The `each` you'll have to do yourself, but you can get `>>` with a simple `include`:
 
 ```ruby
 class MyFilter
