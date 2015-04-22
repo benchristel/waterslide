@@ -1,6 +1,6 @@
 # waterslide
 
-Unix-style pipes for Ruby programs
+A pipes-and-filters DSL for Ruby programs
 
 ## TL;DR
 
@@ -118,7 +118,7 @@ FacebookFriends.new(current_user) >>
   DeserializeFacebookUsers >>
   MergeWithAttributesFromDatabase >>
   RemoveRecordsNotInDatabase >>
-  SerializeUsers
+  Serialize
 ```
 
 There's obviously a lot more lines of code in the new version, but the sequence of transformations reads naturally, it's easy to insert a new transformation without fear of breaking something, and every step can now be unit-tested individually.
@@ -141,15 +141,15 @@ Or install it yourself as:
 
 ## Usage
 
-### Defining Pipe Classes
+### Defining Filter Classes
 
-Classes that include `Waterslide::Pipe` can take advantage of Waterslide's functionality by overriding the `pipe_one` or `incoming` methods.
+Classes that include `Waterslide::Filter` can take advantage of Waterslide's functionality by overriding the `pipe_one` or `incoming` methods.
 
-The `pipe_one` method processes a single item from the collection fed into the pipe via the `>>` operator. To pass a value to the next pipe in the pipeline, `yield` it from `pipe_one`
+The `pipe_one` method processes a single item from the collection fed into the filter via the `>>` operator. To pass a value to the next pipe in the pipeline, `yield` it from `pipe_one`
 
 ```ruby
 class AddOne
-  include Waterslide::Pipe
+  include Waterslide::Filter
 
   def pipe_one(n)
     yield n + 1
@@ -157,19 +157,23 @@ class AddOne
 end
 ```
 
-Note that you can yield any number of times. You can create a filter by yielding an item only if some criterion is met.
+Note that you can yield any number of times. You can imitate Enumerable's `select` method by yielding an item only if some criterion is met.
 
 ```ruby
 class OnlyEvens
-  include Waterslide::Pipe
+  include Waterslide::Filter
 
   def pipe_one(n)
     yield n if n % 2 == 0
   end
 end
+```
 
+By maintaining state as items are piped through the filter, you can do fancier things:
+
+```
 class Unique
-  include Waterslide::Pipe
+  include Waterslide::Filter
 
   def pipe_one(item)
     yield item unless seen.include? item
@@ -182,11 +186,11 @@ class Unique
 end
 ```
 
-By yielding more than once, you can expand a list. The following pipe takes a list of classes and outputs the classes and all their ancestors:
+By yielding more than once, you can expand a list. This is where filters outshine the built-in Enumerable methods. For example, this filter takes a list of classes and outputs the classes and all their ancestors:
 
 ```ruby
 class AndAncestorClasses
-  include Waterslide::Pipe
+  include Waterslide::Filter
 
   def pipe_one(klass)
     yield klass
@@ -197,11 +201,11 @@ class AndAncestorClasses
 end
 ```
 
-If you need to reduce the incoming list, override the `incoming` method. Calling `super` in this method will return the list being piped in. Whatever is returned from `incoming` will be iterated over when calling `each` or another Enumerable method on the pipe.
+If you need to reduce the incoming list, override the `incoming` method. Calling `super` in this method will return the list being piped in. Whatever is returned from `incoming` will be iterated over when calling `each` or another Enumerable method on the filter.
 
 ```ruby
 class Sort
-  include Waterslide::Pipe
+  include Waterslide::Filter
 
   def incoming
     super.sort
@@ -209,28 +213,28 @@ class Sort
 end
 ```
 
-It's not recommended to override both `incoming` and `pipe_one`, as the interaction between these is subject to change in future versions of Waterslide. You probably shouldn't be both mapping and reducing in the same pipe anyway.
+It's not recommended to override both `incoming` and `pipe_one`, as the interaction between these is subject to change in future versions of Waterslide. You probably shouldn't be both mapping and reducing in the same filter anyway.
 
-### Using Pipe Classes
+### Using Filter Classes in a Pipeline
 
-As you may have gathered from the examples, you can link pipes together into a pipeline using the `>>` operator.
+As you may have gathered from the examples, you can link filters together into a pipeline using the `>>` operator.
 
 > ***Ruby has a `>>` operator? What the hell is that?***
 >
 > It's a clone of C's operator that shifts integers some number of bits to the right. Not many people use Ruby for systems programming or cryptography, so bitshifts aren't very common in Ruby code, although the `<<` operator has a cameo in Array as a near-synonym for `push`.
 
-The value of an expression like `Pipe1 >> Pipe2 >> Pipe3` is an instance of the last class in the pipeline - in this example, `Pipe3`.Pipes include `Enumerable`, so they have the nondestructive methods of other Enumerables like `Array`: `each`, `count`, `include?` and so on. You can get at the whole array with the `all` method.
+The value of an expression like `Filter1 >> Filter2 >> Filter3` is an instance of the last class in the pipeline - in this example, `Filter3`. Filters include `Enumerable`, so they have the nondestructive methods of other Enumerables like `Array`: `each`, `count`, `include?` and so on. You can get at the whole array with the `all` method.
 
 That leaves one remaining question: how do we get enumerables *into* the pipeline? The most straightforward way is:
 
 ```ruby
-Waterslide::Pipe[your_data] >> Pipe2 >> # ...
+Waterslide::Filter[your_data] >> Filter2 >> # ...
 ```
 
-This creates a no-op pipe which simply hands off your data to `Pipe2`. However, the first object in the pipeline can be anything that implements the `each` method and Waterslide's `>>` operator. The `each` you'll have to do yourself, but you can get `>>` with a simple `include`:
+This creates a no-op pipe which simply hands off your data to `Filter2`. However, the first object in the pipeline can be anything that implements the `each` method and Waterslide's `>>` operator. The `each` you'll have to do yourself, but you can get `>>` with a simple `include`:
 
 ```ruby
-class MyPipe
+class MyFilter
   include Waterslide::RightShiftOverride
 
   def each(&block)
@@ -254,8 +258,6 @@ class Array
   include Waterslide::RightShiftOverride
 end
 ```
-
-You should probably only do this if everyone on your team is on board with Waterslide and knows how to use it; otherwise, they'll have a hell of time deciphering your code.
 
 ## Contributing
 

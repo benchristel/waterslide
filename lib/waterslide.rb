@@ -1,16 +1,16 @@
 module Waterslide
   module RightShiftOverride
-    def >> (pipe)
-      instantiated(pipe).receive_from(self)
+    def >> (filter)
+      instantiated(filter).receive_from(self)
     end
 
     private
-    def instantiated(pipe)
-      pipe.is_a?(Class) ? pipe.new : pipe
+    def instantiated(filter)
+      filter.is_a?(Class) ? filter.new : filter
     end
   end
 
-  module Pipe
+  module Filter
     def self.included(base)
       base.class_eval do
         include Enumerable
@@ -60,6 +60,6 @@ module Waterslide
   end
 
   class NoOp
-    include Pipe
+    include Filter
   end
 end
